@@ -1,0 +1,5 @@
+{
+  "name": "ArXiv Synthesis Engine",
+  "description": "Synthesize complex arXiv research into interactive, schema-validated technical diagrams using Gemini 3.",
+  "requestFramePermissions": []
+}
