@@ -27,6 +27,27 @@ async function startServer() {
     }
   });
 
+  // PDF Proxy
+  app.get("/api/pdf", async (req, res) => {
+    try {
+      const { url } = req.query;
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: "URL is required" });
+      }
+      const response = await axios.get(url, {
+        responseType: 'arraybuffer',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      });
+      res.set('Content-Type', 'application/pdf');
+      res.send(response.data);
+    } catch (error) {
+      console.error("PDF proxy error:", error);
+      res.status(500).json({ error: "Failed to fetch PDF" });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

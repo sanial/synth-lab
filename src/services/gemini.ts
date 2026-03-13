@@ -16,6 +16,7 @@ export async function synthesizeAll(papers: { title: string; summary: string }[]
     
     Mermaid Syntax Rules (CRITICAL):
     - Use "graph TD" for flowcharts.
+    - ALWAYS put a newline or space after "graph TD" before starting the first node.
     - ALWAYS wrap node labels in double quotes if they contain special characters like parentheses, brackets, colons, or commas. Example: A["Process (Step 1)"]
     - Avoid using reserved words like "end", "graph", "subgraph" as node IDs.
     - Ensure all arrows are valid (e.g., -->, ---, ==>, -- text -->).
@@ -25,7 +26,8 @@ export async function synthesizeAll(papers: { title: string; summary: string }[]
     {
       "diagram": "mermaid code for main synthesis",
       "analysis": "text analysis...",
-      "subDiagrams": ["mermaid code 1", "mermaid code 2"]
+      "subDiagrams": ["mermaid code 1", "mermaid code 2"],
+      "deepDiveTopics": ["Topic 1", "Topic 2", "Topic 3"]
     }
   `;
 
@@ -40,9 +42,14 @@ export async function synthesizeAll(papers: { title: string; summary: string }[]
           properties: {
             diagram: { type: Type.STRING },
             analysis: { type: Type.STRING },
-            subDiagrams: { type: Type.ARRAY, items: { type: Type.STRING } }
+            subDiagrams: { type: Type.ARRAY, items: { type: Type.STRING } },
+            deepDiveTopics: { 
+              type: Type.ARRAY, 
+              items: { type: Type.STRING },
+              description: "3-4 key technical concepts or topics mentioned in the synthesis that deserve a deep dive."
+            }
           },
-          required: ["diagram", "analysis", "subDiagrams"]
+          required: ["diagram", "analysis", "subDiagrams", "deepDiveTopics"]
         }
       }
     });
@@ -52,10 +59,57 @@ export async function synthesizeAll(papers: { title: string; summary: string }[]
     return {
       diagram: result.diagram,
       analysis: result.analysis,
-      subDiagrams: result.subDiagrams
+      subDiagrams: result.subDiagrams,
+      deepDiveTopics: result.deepDiveTopics || []
     };
   } catch (error) {
     console.error("Error in comprehensive synthesis:", error);
+    throw error;
+  }
+}
+
+export async function getDeepDiveContent(topic: string) {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `Explain the technical concept of "${topic}" in detail. 
+      Include a Mermaid.js diagram (graph TD) to teach the core mechanism.
+      Use Google Search to ensure the explanation is accurate and up-to-date.
+      
+      Mermaid Syntax Rules (CRITICAL):
+      - Use "graph TD" for flowcharts.
+      - ALWAYS put a newline or space after "graph TD" before starting the first node.
+      - ALWAYS wrap node labels in double quotes if they contain special characters.
+      
+      Return the response in JSON format:
+      {
+        "explanation": "detailed markdown text...",
+        "diagram": "mermaid code...",
+        "sources": ["url1", "url2"]
+      }`,
+      config: {
+        tools: [{ googleSearch: {} }],
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            explanation: { type: Type.STRING },
+            diagram: { type: Type.STRING },
+            sources: { 
+              type: Type.ARRAY, 
+              items: { type: Type.STRING },
+              description: "URLs from Google Search results used for this explanation."
+            }
+          },
+          required: ["explanation", "diagram", "sources"]
+        }
+      }
+    });
+
+    const result = JSON.parse(response.text || "{}");
+    return result;
+  } catch (error) {
+    console.error("Error in deep dive generation:", error);
     throw error;
   }
 }

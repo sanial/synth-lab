@@ -64,6 +64,7 @@ export const ChatAgent: React.FC<ChatAgentProps> = ({ currentDiagram, selectedPa
             3. Use the format: \`\`\`mermaid [code] \`\`\`
             4. Mermaid Syntax Rules (CRITICAL):
                - Use "graph TD" for flowcharts.
+               - ALWAYS put a newline or space after "graph TD" before starting the first node.
                - ALWAYS wrap node labels in double quotes if they contain special characters like parentheses, brackets, colons, or commas. Example: A["Process (Step 1)"]
                - Avoid using reserved words like "end", "graph", "subgraph" as node IDs.
                - Ensure all arrows are valid (e.g., -->, ---, ==>, -- text -->).

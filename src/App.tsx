@@ -5,6 +5,8 @@ import { searchArxiv, ArxivPaper } from './services/arxiv';
 import { synthesizeAll, generateAudio } from './services/gemini';
 import { Diagram } from './components/Diagram';
 import { AnalysisAgent } from './components/AnalysisAgent';
+import { DeepDive } from './components/DeepDive';
+import { PdfAnalysis } from './services/pdf';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -28,7 +30,12 @@ export default function App() {
   const [offset, setOffset] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [activeTab, setActiveTab] = useState<'diagram' | 'analysis'>('diagram');
+  const [activeTab, setActiveTab] = useState<'diagram' | 'analysis' | 'deepdive'>('diagram');
+  
+  // PDF Analysis state lifted from DeepDive
+  const [pdfAnalyses, setPdfAnalyses] = useState<Record<string, PdfAnalysis>>({});
+  const [pdfLoading, setPdfLoading] = useState<Record<string, boolean>>({});
+  const [selectedPdfId, setSelectedPdfId] = useState<string | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,6 +140,9 @@ export default function App() {
   const clearSelection = () => {
     setSelectedPapers([]);
     setDiagram(null);
+    setPdfAnalyses({});
+    setPdfLoading({});
+    setSelectedPdfId(null);
   };
 
   return (
@@ -298,16 +308,27 @@ export default function App() {
               >
                 02. Research Agent
               </button>
+              <button
+                onClick={() => setActiveTab('deepdive')}
+                className={cn(
+                  "px-6 py-3 rounded-t-2xl text-[10px] uppercase tracking-widest font-medium transition-all border-x border-t",
+                  activeTab === 'deepdive' 
+                    ? "bg-white border-[#141414]/20 text-[#141414]" 
+                    : "bg-[#E4E3E0]/50 border-transparent text-[#141414]/40 hover:bg-[#E4E3E0]"
+                )}
+              >
+                03. Deep Dive
+              </button>
             </div>
 
             <div className="bg-white border border-[#141414]/20 rounded-b-3xl rounded-tr-3xl p-8 lg:p-12 shadow-sm flex-1 flex flex-col min-h-[600px]">
               <div className="flex justify-between items-end mb-8">
                 <div>
                   <span className="text-[10px] font-mono uppercase tracking-widest opacity-40 block mb-2">
-                    {activeTab === 'diagram' ? 'Visualization Module' : 'Analysis Module'}
+                    {activeTab === 'diagram' ? 'Visualization Module' : activeTab === 'analysis' ? 'Analysis Module' : 'Deep Dive Module'}
                   </span>
                   <h2 className="font-serif italic text-3xl">
-                    {activeTab === 'diagram' ? 'Technical Synthesis' : 'Research Synthesis Agent'}
+                    {activeTab === 'diagram' ? 'Technical Synthesis' : activeTab === 'analysis' ? 'Research Synthesis Agent' : 'Deep Dive Visualization'}
                   </h2>
                 </div>
                 
@@ -347,7 +368,7 @@ export default function App() {
                       >
                         <Diagram chart={diagram} />
                       </motion.div>
-                    ) : (
+                    ) : activeTab === 'analysis' ? (
                       <motion.div
                         key="analysis"
                         initial={{ opacity: 0, x: 10 }}
@@ -359,6 +380,24 @@ export default function App() {
                           papers={selectedPapers} 
                           mainDiagram={diagram} 
                           preloadedResult={analysisResult}
+                        />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="deepdive"
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        className="w-full h-full"
+                      >
+                        <DeepDive 
+                          papers={selectedPapers} 
+                          analyses={pdfAnalyses}
+                          setAnalyses={setPdfAnalyses}
+                          loading={pdfLoading}
+                          setLoading={setPdfLoading}
+                          selectedPaperId={selectedPdfId}
+                          setSelectedPaperId={setSelectedPdfId}
                         />
                       </motion.div>
                     )}

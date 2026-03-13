@@ -24,12 +24,23 @@ export const Diagram: React.FC<DiagramProps> = ({ chart }) => {
           
           // Clean the chart code
           let cleanChart = chart.trim();
+          
+          // Handle literal \n strings that sometimes appear in JSON responses
+          cleanChart = cleanChart.replace(/\\n/g, '\n');
+          
           if (cleanChart.startsWith('```')) {
             cleanChart = cleanChart.replace(/^```(?:mermaid)?\n?/, '').replace(/\n?```$/, '');
           }
           if (cleanChart.startsWith('mermaid')) {
             cleanChart = cleanChart.replace(/^mermaid\n?/, '');
           }
+
+          // Fix common error: "graph TD" followed immediately by a quote or bracket
+          // Mermaid requires a space or newline after the direction
+          cleanChart = cleanChart.replace(/^(graph\s+[TDBRLR]{2})([^\s\n])/, '$1\n$2');
+          
+          // Fix escaped quotes that AI sometimes adds
+          cleanChart = cleanChart.replace(/\\"/g, '"');
 
           const id = `mermaid-${Math.random().toString(36).substring(2, 9)}`;
           
