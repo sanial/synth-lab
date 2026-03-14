@@ -7,23 +7,42 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // arXiv Proxy
+  // arXiv Proxy with retry logic
   app.get("/api/arxiv", async (req, res) => {
+    const { search_query, start, max_results } = req.query;
+    const maxRetries = 3;
+    let retryCount = 0;
+
+    const fetchArxiv = async (): Promise<any> => {
+      try {
+        const response = await axios.get("http://export.arxiv.org/api/query", {
+          params: { search_query, start, max_results },
+          timeout: 10000,
+        });
+        return await parseStringPromise(response.data);
+      } catch (error: any) {
+        if (error.response?.status === 429 && retryCount < maxRetries) {
+          retryCount++;
+          const delay = Math.pow(2, retryCount) * 1000;
+          console.log(`arXiv rate limited. Retrying in ${delay}ms... (Attempt ${retryCount}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return fetchArxiv();
+        }
+        throw error;
+      }
+    };
+
     try {
-      const { search_query, start, max_results } = req.query;
-      const response = await axios.get("http://export.arxiv.org/api/query", {
-        params: {
-          search_query,
-          start,
-          max_results,
-        },
-      });
-      
-      const result = await parseStringPromise(response.data);
+      const result = await fetchArxiv();
       res.json(result);
-    } catch (error) {
-      console.error("arXiv proxy error:", error);
-      res.status(500).json({ error: "Failed to fetch from arXiv" });
+    } catch (error: any) {
+      console.error("arXiv proxy error:", error.message);
+      const status = error.response?.status || 500;
+      res.status(status).json({ 
+        error: "Failed to fetch from arXiv", 
+        details: error.message,
+        status: status
+      });
     }
   });
 

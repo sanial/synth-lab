@@ -24,10 +24,6 @@ export const Diagram: React.FC<DiagramProps> = ({ chart }) => {
           
           // Clean the chart code
           let cleanChart = chart.trim();
-          
-          // Handle literal \n strings that sometimes appear in JSON responses
-          cleanChart = cleanChart.replace(/\\n/g, '\n');
-          
           if (cleanChart.startsWith('```')) {
             cleanChart = cleanChart.replace(/^```(?:mermaid)?\n?/, '').replace(/\n?```$/, '');
           }
@@ -35,12 +31,18 @@ export const Diagram: React.FC<DiagramProps> = ({ chart }) => {
             cleanChart = cleanChart.replace(/^mermaid\n?/, '');
           }
 
-          // Fix common error: "graph TD" followed immediately by a quote or bracket
-          // Mermaid requires a space or newline after the direction
-          cleanChart = cleanChart.replace(/^(graph\s+[TDBRLR]{2})([^\s\n])/, '$1\n$2');
+          // Fix common error: missing space/newline after graph TD/LR/etc
+          cleanChart = cleanChart.replace(/^(graph\s+(?:TD|LR|BT|RL|TB))([^\s\n])/i, '$1\n$2');
           
-          // Fix escaped quotes that AI sometimes adds
-          cleanChart = cleanChart.replace(/\\"/g, '"');
+          // Fix common error: using quotes directly after graph TD without node ID
+          if (cleanChart.match(/^graph\s+\w+\s*"/)) {
+            cleanChart = cleanChart.replace(/^(graph\s+\w+\s*)(".*")/, '$1A[$2]');
+          }
+
+          // Fix common error: newlines inside quotes (Mermaid doesn't like this)
+          cleanChart = cleanChart.replace(/"([^"]*)"/g, (match, p1) => {
+            return `"${p1.replace(/\n/g, ' ')}"`;
+          });
 
           const id = `mermaid-${Math.random().toString(36).substring(2, 9)}`;
           

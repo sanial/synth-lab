@@ -6,6 +6,7 @@ import { synthesizeAll, generateAudio } from './services/gemini';
 import { Diagram } from './components/Diagram';
 import { AnalysisAgent } from './components/AnalysisAgent';
 import { DeepDive } from './components/DeepDive';
+import { ConceptualDive } from './components/ConceptualDive';
 import { PdfAnalysis } from './services/pdf';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -30,12 +31,16 @@ export default function App() {
   const [offset, setOffset] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [activeTab, setActiveTab] = useState<'diagram' | 'analysis' | 'deepdive'>('diagram');
+  const [activeTab, setActiveTab] = useState<'diagram' | 'analysis' | 'deepdive' | 'conceptual'>('diagram');
   
   // PDF Analysis state lifted from DeepDive
   const [pdfAnalyses, setPdfAnalyses] = useState<Record<string, PdfAnalysis>>({});
   const [pdfLoading, setPdfLoading] = useState<Record<string, boolean>>({});
   const [selectedPdfId, setSelectedPdfId] = useState<string | null>(null);
+
+  // Conceptual Dive state
+  const [conceptualAnalysis, setConceptualAnalysis] = useState<any>(null);
+  const [conceptualLoading, setConceptualLoading] = useState(false);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -319,16 +324,27 @@ export default function App() {
               >
                 03. Deep Dive
               </button>
+              <button
+                onClick={() => setActiveTab('conceptual')}
+                className={cn(
+                  "px-6 py-3 rounded-t-2xl text-[10px] uppercase tracking-widest font-medium transition-all border-x border-t",
+                  activeTab === 'conceptual' 
+                    ? "bg-white border-[#141414]/20 text-[#141414]" 
+                    : "bg-[#E4E3E0]/50 border-transparent text-[#141414]/40 hover:bg-[#E4E3E0]"
+                )}
+              >
+                04. Conceptual Dive
+              </button>
             </div>
 
             <div className="bg-white border border-[#141414]/20 rounded-b-3xl rounded-tr-3xl p-8 lg:p-12 shadow-sm flex-1 flex flex-col min-h-[600px]">
               <div className="flex justify-between items-end mb-8">
                 <div>
                   <span className="text-[10px] font-mono uppercase tracking-widest opacity-40 block mb-2">
-                    {activeTab === 'diagram' ? 'Visualization Module' : activeTab === 'analysis' ? 'Analysis Module' : 'Deep Dive Module'}
+                    {activeTab === 'diagram' ? 'Visualization Module' : activeTab === 'analysis' ? 'Analysis Module' : activeTab === 'deepdive' ? 'Deep Dive Module' : 'Conceptual Module'}
                   </span>
                   <h2 className="font-serif italic text-3xl">
-                    {activeTab === 'diagram' ? 'Technical Synthesis' : activeTab === 'analysis' ? 'Research Synthesis Agent' : 'Deep Dive Visualization'}
+                    {activeTab === 'diagram' ? 'Technical Synthesis' : activeTab === 'analysis' ? 'Research Synthesis Agent' : activeTab === 'deepdive' ? 'Deep Dive Visualization' : 'Conceptual Comparison'}
                   </h2>
                 </div>
                 
@@ -382,7 +398,7 @@ export default function App() {
                           preloadedResult={analysisResult}
                         />
                       </motion.div>
-                    ) : (
+                    ) : activeTab === 'deepdive' ? (
                       <motion.div
                         key="deepdive"
                         initial={{ opacity: 0, x: 10 }}
@@ -398,6 +414,22 @@ export default function App() {
                           setLoading={setPdfLoading}
                           selectedPaperId={selectedPdfId}
                           setSelectedPaperId={setSelectedPdfId}
+                        />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="conceptual"
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        className="w-full h-full"
+                      >
+                        <ConceptualDive 
+                          papers={selectedPapers} 
+                          analysis={conceptualAnalysis}
+                          setAnalysis={setConceptualAnalysis}
+                          loading={conceptualLoading}
+                          setLoading={setConceptualLoading}
                         />
                       </motion.div>
                     )}

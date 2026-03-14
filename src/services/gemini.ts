@@ -15,19 +15,24 @@ export async function synthesizeAll(papers: { title: string; summary: string }[]
     ${combinedSummary}
     
     Mermaid Syntax Rules (CRITICAL):
-    - Use "graph TD" for flowcharts.
-    - ALWAYS put a newline or space after "graph TD" before starting the first node.
-    - ALWAYS wrap node labels in double quotes if they contain special characters like parentheses, brackets, colons, or commas. Example: A["Process (Step 1)"]
+    - Start with "graph TD" followed IMMEDIATELY by a NEWLINE.
+    - IMPORTANT: The first node definition MUST be on a new line, NOT on the same line as "graph TD".
+    - Use unique alphanumeric IDs for nodes (e.g., A, B, C).
+    - ALWAYS wrap descriptive node labels in double quotes and square brackets. Example: A["Input Sequence (2024)"]
+    - Node labels MUST NOT contain newlines. Use spaces instead.
+    - Correct structure:
+      graph TD
+        A["Start"] --> B["Process"]
     - Avoid using reserved words like "end", "graph", "subgraph" as node IDs.
     - Ensure all arrows are valid (e.g., -->, ---, ==>, -- text -->).
     - Do not use brackets [] or () directly in node IDs.
+    - If using circular nodes, use (( )) correctly: A(("Label")). But prefer square brackets [] for reliability.
     
     Return the response in JSON format:
     {
       "diagram": "mermaid code for main synthesis",
       "analysis": "text analysis...",
-      "subDiagrams": ["mermaid code 1", "mermaid code 2"],
-      "deepDiveTopics": ["Topic 1", "Topic 2", "Topic 3"]
+      "subDiagrams": ["mermaid code 1", "mermaid code 2"]
     }
   `;
 
@@ -42,14 +47,9 @@ export async function synthesizeAll(papers: { title: string; summary: string }[]
           properties: {
             diagram: { type: Type.STRING },
             analysis: { type: Type.STRING },
-            subDiagrams: { type: Type.ARRAY, items: { type: Type.STRING } },
-            deepDiveTopics: { 
-              type: Type.ARRAY, 
-              items: { type: Type.STRING },
-              description: "3-4 key technical concepts or topics mentioned in the synthesis that deserve a deep dive."
-            }
+            subDiagrams: { type: Type.ARRAY, items: { type: Type.STRING } }
           },
-          required: ["diagram", "analysis", "subDiagrams", "deepDiveTopics"]
+          required: ["diagram", "analysis", "subDiagrams"]
         }
       }
     });
@@ -59,57 +59,10 @@ export async function synthesizeAll(papers: { title: string; summary: string }[]
     return {
       diagram: result.diagram,
       analysis: result.analysis,
-      subDiagrams: result.subDiagrams,
-      deepDiveTopics: result.deepDiveTopics || []
+      subDiagrams: result.subDiagrams
     };
   } catch (error) {
     console.error("Error in comprehensive synthesis:", error);
-    throw error;
-  }
-}
-
-export async function getDeepDiveContent(topic: string) {
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Explain the technical concept of "${topic}" in detail. 
-      Include a Mermaid.js diagram (graph TD) to teach the core mechanism.
-      Use Google Search to ensure the explanation is accurate and up-to-date.
-      
-      Mermaid Syntax Rules (CRITICAL):
-      - Use "graph TD" for flowcharts.
-      - ALWAYS put a newline or space after "graph TD" before starting the first node.
-      - ALWAYS wrap node labels in double quotes if they contain special characters.
-      
-      Return the response in JSON format:
-      {
-        "explanation": "detailed markdown text...",
-        "diagram": "mermaid code...",
-        "sources": ["url1", "url2"]
-      }`,
-      config: {
-        tools: [{ googleSearch: {} }],
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            explanation: { type: Type.STRING },
-            diagram: { type: Type.STRING },
-            sources: { 
-              type: Type.ARRAY, 
-              items: { type: Type.STRING },
-              description: "URLs from Google Search results used for this explanation."
-            }
-          },
-          required: ["explanation", "diagram", "sources"]
-        }
-      }
-    });
-
-    const result = JSON.parse(response.text || "{}");
-    return result;
-  } catch (error) {
-    console.error("Error in deep dive generation:", error);
     throw error;
   }
 }

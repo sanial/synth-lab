@@ -31,7 +31,9 @@ body {
   border-radius: 10px;
 }
 
-.mermaid svg {
-  max-width: 100%;
-  height: auto;
+.mermaid svg,
+.mermaid-container svg {
+  max-width: 100% !important;
+  min-width: 600px;
+  height: auto !important;
 }
