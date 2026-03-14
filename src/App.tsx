@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Search, Loader2, Network, FileText, ExternalLink, Sparkles, ChevronRight, Share2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { searchArxiv, ArxivPaper } from './services/arxiv';
-import { synthesizeAll, generateAudio } from './services/gemini';
+import { synthesizeAll, generateAudio, synthesizeStream } from './services/gemini';
 import { Diagram } from './components/Diagram';
+import { FlowDiagram } from './components/FlowDiagram';
 import { AnalysisAgent } from './components/AnalysisAgent';
+import { Node, Edge, MarkerType } from 'reactflow';
 import { DeepDive } from './components/DeepDive';
 import { ConceptualDive } from './components/ConceptualDive';
 import { PdfAnalysis } from './services/pdf';
@@ -32,6 +34,11 @@ export default function App() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [activeTab, setActiveTab] = useState<'diagram' | 'analysis' | 'deepdive' | 'conceptual'>('diagram');
+  
+  // Flow state for streaming
+  const [flowNodes, setFlowNodes] = useState<Node[]>([]);
+  const [flowEdges, setFlowEdges] = useState<Edge[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
   
   // PDF Analysis state lifted from DeepDive
   const [pdfAnalyses, setPdfAnalyses] = useState<Record<string, PdfAnalysis>>({});
@@ -84,17 +91,42 @@ export default function App() {
 
   const handleGenerateSingle = async (paper: ArxivPaper) => {
     setGenerating(true);
+    setIsStreaming(true);
     setDiagram(null);
+    setFlowNodes([]);
+    setFlowEdges([]);
     setAnalysisResult(null);
     setError(null);
     setActiveTab('diagram');
+    
+    let accumulatedText = '';
     try {
+      const stream = synthesizeStream([paper]);
+      for await (const chunk of stream) {
+        accumulatedText += chunk;
+        const { nodes, edges } = parseStreamToFlow(accumulatedText);
+        setFlowNodes(nodes);
+        setFlowEdges(edges);
+        
+        // If we see ANALYSIS:, we can start showing some text if we had a place for it
+        if (accumulatedText.includes('ANALYSIS:')) {
+          const analysis = accumulatedText.split('ANALYSIS:')[1].trim();
+          setAnalysisResult(prev => ({
+            analysis,
+            subDiagrams: prev?.subDiagrams || [],
+            audioData: prev?.audioData
+          }));
+        }
+      }
+      
+      // After stream finishes, we might want to do a full synthesis for the other tabs
+      // or just use the streamed data. For now, let's do a full synthesis to get Mermaid code for other tabs
       const result = await synthesizeAll([paper]);
       setDiagram(result.diagram);
       setAnalysisResult(result);
       setGenerating(false);
+      setIsStreaming(false);
 
-      // Background audio generation
       generateAudio(result.analysis).then(audioData => {
         if (audioData) {
           setAnalysisResult(prev => prev ? { ...prev, audioData } : null);
@@ -103,6 +135,7 @@ export default function App() {
     } catch (err) {
       setError('Failed to generate diagram. Gemini might be busy.');
       setGenerating(false);
+      setIsStreaming(false);
     }
   };
 
@@ -110,18 +143,39 @@ export default function App() {
     if (selectedPapers.length === 0) return;
     
     setGenerating(true);
+    setIsStreaming(true);
     setDiagram(null);
+    setFlowNodes([]);
+    setFlowEdges([]);
     setAnalysisResult(null);
     setError(null);
     setActiveTab('diagram');
     
+    let accumulatedText = '';
     try {
+      const stream = synthesizeStream(selectedPapers);
+      for await (const chunk of stream) {
+        accumulatedText += chunk;
+        const { nodes, edges } = parseStreamToFlow(accumulatedText);
+        setFlowNodes(nodes);
+        setFlowEdges(edges);
+
+        if (accumulatedText.includes('ANALYSIS:')) {
+          const analysis = accumulatedText.split('ANALYSIS:')[1].trim();
+          setAnalysisResult(prev => ({
+            analysis,
+            subDiagrams: prev?.subDiagrams || [],
+            audioData: prev?.audioData
+          }));
+        }
+      }
+
       const result = await synthesizeAll(selectedPapers);
       setDiagram(result.diagram);
       setAnalysisResult(result);
       setGenerating(false);
+      setIsStreaming(false);
 
-      // Background audio generation
       generateAudio(result.analysis).then(audioData => {
         if (audioData) {
           setAnalysisResult(prev => prev ? { ...prev, audioData } : null);
@@ -131,7 +185,55 @@ export default function App() {
       console.error('Synthesis error:', err);
       setError('Failed to process research. The AI model might be overloaded or the content is too complex.');
       setGenerating(false);
+      setIsStreaming(false);
     }
+  };
+
+  const parseStreamToFlow = (text: string) => {
+    const nodes: Node[] = [];
+    const edges: Edge[] = [];
+    const lines = text.split('\n');
+    
+    lines.forEach(line => {
+      const trimmedLine = line.trim();
+      if (trimmedLine.startsWith('NODE:')) {
+        const parts = trimmedLine.replace('NODE:', '').split('|').map(p => p.trim());
+        if (parts.length >= 2) {
+          nodes.push({
+            id: parts[0],
+            data: { label: parts[1] },
+            type: parts[2] || 'default',
+            position: { x: 0, y: 0 },
+            style: {
+              background: '#fff',
+              border: '1px solid #141414',
+              borderRadius: '8px',
+              fontSize: '10px',
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: '500',
+              padding: '10px',
+              width: 180,
+              textAlign: 'center',
+              color: '#141414',
+            },
+          });
+        }
+      } else if (trimmedLine.startsWith('EDGE:')) {
+        const parts = trimmedLine.replace('EDGE:', '').split('|').map(p => p.trim());
+        if (parts.length >= 2) {
+          edges.push({
+            id: `e-${parts[0]}-${parts[1]}`,
+            source: parts[0],
+            target: parts[1],
+            label: parts[2] || '',
+            animated: true,
+            markerEnd: { type: MarkerType.ArrowClosed },
+          });
+        }
+      }
+    });
+    
+    return { nodes, edges };
   };
 
   const togglePaperSelection = (paper: ArxivPaper) => {
@@ -361,7 +463,7 @@ export default function App() {
               </div>
 
               <div className="flex-1 flex flex-col relative">
-                {generating ? (
+                {generating && !isStreaming ? (
                   <div className="flex-1 flex flex-col items-center justify-center gap-4">
                     <div className="relative">
                       <Loader2 className="animate-spin text-[#141414] w-12 h-12" />
@@ -372,7 +474,7 @@ export default function App() {
                       <p className="text-[10px] uppercase tracking-widest opacity-40 mt-1">Gemini 3 Flash Processing</p>
                     </div>
                   </div>
-                ) : diagram ? (
+                ) : (diagram || isStreaming) ? (
                   <AnimatePresence mode="wait">
                     {activeTab === 'diagram' ? (
                       <motion.div 
@@ -380,9 +482,19 @@ export default function App() {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 10 }}
-                        className="w-full"
+                        className="w-full h-full flex flex-col"
                       >
-                        <Diagram chart={diagram} />
+                        {isStreaming ? (
+                          <div className="flex-1 flex flex-col">
+                            <div className="flex items-center gap-2 mb-4">
+                              <Loader2 className="animate-spin text-[#141414]" size={14} />
+                              <span className="text-[10px] uppercase tracking-widest opacity-60">Streaming Architecture...</span>
+                            </div>
+                            <FlowDiagram nodes={flowNodes} edges={flowEdges} />
+                          </div>
+                        ) : (
+                          <Diagram chart={diagram!} />
+                        )}
                       </motion.div>
                     ) : activeTab === 'analysis' ? (
                       <motion.div

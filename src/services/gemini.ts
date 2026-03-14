@@ -2,6 +2,44 @@ import { GoogleGenAI, Type, Modality } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
+export async function* synthesizeStream(papers: { title: string; summary: string }[]) {
+  const combinedSummary = papers.map(p => `Title: ${p.title}\nSummary: ${p.summary}`).join("\n\n---\n\n");
+  
+  const prompt = `
+    Analyze these ${papers.length} research papers and create a technical architecture diagram.
+    Output the diagram as a series of nodes and edges in the following format:
+    NODE: ID | LABEL | TYPE (one of: input, output, default)
+    EDGE: SOURCE_ID | TARGET_ID | LABEL (optional)
+    
+    After the diagram, provide a deep analysis starting with "ANALYSIS:".
+    
+    Papers:
+    ${combinedSummary}
+    
+    Example:
+    NODE: A | Data Source | input
+    NODE: B | Processing | default
+    EDGE: A | B | stream
+    ANALYSIS: This architecture...
+  `;
+
+  try {
+    const stream = await ai.models.generateContentStream({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+    });
+
+    for await (const chunk of stream) {
+      if (chunk.text) {
+        yield chunk.text;
+      }
+    }
+  } catch (error) {
+    console.error("Error in streaming synthesis:", error);
+    throw error;
+  }
+}
+
 export async function synthesizeAll(papers: { title: string; summary: string }[]) {
   const combinedSummary = papers.map(p => `Title: ${p.title}\nSummary: ${p.summary}`).join("\n\n---\n\n");
   
