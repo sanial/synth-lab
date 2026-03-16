@@ -349,7 +349,7 @@ export default function App() {
             <Network className="text-[#E4E3E0] w-6 h-6" />
           </div>
           <div>
-            <h1 className="font-serif italic text-xl leading-none">ArXiv Synthesis Engine</h1>
+            <h1 className="font-serif italic text-xl leading-none">Synthesis Lab</h1>
             <p className="text-[10px] uppercase tracking-widest opacity-50 mt-1">Multimodal Research Processor v1.0</p>
           </div>
         </div>

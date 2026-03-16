@@ -93,7 +93,6 @@ export const AnalysisAgent: React.FC<AnalysisAgentProps> = ({ papers, mainDiagra
     <div className="w-full">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h3 className="font-serif italic text-2xl">Research Synthesis Agent</h3>
           <p className="text-[10px] uppercase tracking-widest opacity-40 mt-1">Multimodal Analysis & Narration</p>
         </div>
         
