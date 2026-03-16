@@ -1,14 +1,11 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Loader2, RotateCcw } from 'lucide-react';
 import ReactFlow, {
   Node,
   Edge,
   ConnectionLineType,
-  useNodesState,
-  useEdgesState,
   Background,
   Controls,
-  MarkerType,
   Position,
   Handle,
   NodeProps,
@@ -16,11 +13,8 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
 
-const dagreGraph = new dagre.graphlib.Graph();
-dagreGraph.setDefaultEdgeLabel(() => ({}));
-
 const nodeWidth = 220;
-const nodeHeight = 50;
+const nodeHeight = 76;
 
 const CustomNode = ({ id, data, selected }: NodeProps) => {
   return (
@@ -53,6 +47,8 @@ const nodeTypes = {
 
 const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => {
   const isHorizontal = direction === 'LR';
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
   dagreGraph.setGraph({ rankdir: direction });
 
   nodes.forEach((node) => {
@@ -91,19 +87,16 @@ interface FlowDiagramProps {
 }
 
 export const FlowDiagram: React.FC<FlowDiagramProps> = ({ nodes: initialNodes, edges: initialEdges, onNodeClick, onUndo, canUndo = false }) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
-  useEffect(() => {
-    if (initialNodes.length > 0) {
-      const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-        [...initialNodes],
-        [...initialEdges]
-      );
-      setNodes(layoutedNodes);
-      setEdges(layoutedEdges);
+  const { nodes, edges } = useMemo(() => {
+    if (!initialNodes.length) {
+      return { nodes: [], edges: [] };
     }
-  }, [initialNodes, initialEdges, setNodes, setEdges]);
+
+    return getLayoutedElements(
+      initialNodes.map((node) => ({ ...node, data: { ...node.data } })),
+      initialEdges.map((edge) => ({ ...edge }))
+    );
+  }, [initialNodes, initialEdges]);
 
   return (
     <div className="w-full h-[600px] bg-white rounded-2xl border border-[#141414]/10 shadow-sm overflow-hidden relative">
@@ -117,14 +110,19 @@ export const FlowDiagram: React.FC<FlowDiagramProps> = ({ nodes: initialNodes, e
         Undo
       </button>
       <ReactFlow
+        key={`${nodes.length}-${edges.length}`}
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick ? (_, node) => onNodeClick(node) : undefined}
         connectionLineType={ConnectionLineType.SmoothStep}
         fitView
+        fitViewOptions={{ padding: 0.35, includeHiddenNodes: true, duration: 0 }}
+        minZoom={0.1}
+        maxZoom={1.5}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        elementsSelectable={true}
         className="bg-white"
       >
         <Background color="#141414" gap={20} size={1} />
