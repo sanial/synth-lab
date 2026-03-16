@@ -124,7 +124,7 @@ export const FlowDiagram: React.FC<FlowDiagramProps> = ({ nodes: initialNodes, e
         fitView
         className="bg-white"
       >
-        <Background color="#141414" gap={20} size={1} opacity={0.05} />
+        <Background color="#141414" gap={20} size={1} />
         <Controls className="bg-white border-[#141414]/10 shadow-sm" />
       </ReactFlow>
     </div>

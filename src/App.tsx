@@ -51,6 +51,9 @@ export default function App() {
   
   // Selected node for tab generation
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  
+  // Diagram mode: flow or final
+  const [diagramMode, setDiagramMode] = useState<'flow' | 'final'>('flow');
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +104,7 @@ export default function App() {
     setAnalysisResult(null);
     setError(null);
     setActiveTab('diagram');
+    setDiagramMode('flow');
     
     let accumulatedText = '';
     try {
@@ -153,6 +157,7 @@ export default function App() {
     setAnalysisResult(null);
     setError(null);
     setActiveTab('diagram');
+    setDiagramMode('flow');
     
     let accumulatedText = '';
     try {
@@ -453,6 +458,13 @@ export default function App() {
                 
                 {diagram && activeTab === 'diagram' && (
                   <div className="flex gap-2">
+                    <button 
+                      onClick={() => setDiagramMode(diagramMode === 'flow' ? 'final' : 'flow')}
+                      className="px-4 py-2 bg-[#141414] text-[#E4E3E0] rounded-lg text-[10px] uppercase tracking-widest font-medium hover:opacity-90 transition-all"
+                    >
+                      {diagramMode === 'flow' ? 'Final Mode' : 'Flow Mode'}
+                    </button>
+                    <div className="w-px h-6 bg-[#141414]/10 mx-2" />
                     <button className="p-2 border border-[#141414]/10 rounded-lg hover:bg-[#141414] hover:text-[#E4E3E0] transition-all">
                       <Share2 size={16} />
                     </button>
@@ -500,6 +512,15 @@ export default function App() {
                               }}
                             />
                           </div>
+                        ) : diagram && diagramMode === 'flow' ? (
+                          <FlowDiagram 
+                            nodes={flowNodes} 
+                            edges={flowEdges} 
+                            onNodeClick={(node) => {
+                              setSelectedNodeId(node.id);
+                              setActiveTab('deepdive');
+                            }}
+                          />
                         ) : (
                           <Diagram chart={diagram!} />
                         )}
