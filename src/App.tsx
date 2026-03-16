@@ -38,6 +38,7 @@ export default function App() {
   // Flow state for streaming
   const [flowNodes, setFlowNodes] = useState<Node[]>([]);
   const [flowEdges, setFlowEdges] = useState<Edge[]>([]);
+  const [flowExpansionHistory, setFlowExpansionHistory] = useState<Array<{ nodeIds: string[]; edgeIds: string[] }>>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   
   // PDF Analysis state lifted from DeepDive
@@ -101,6 +102,7 @@ export default function App() {
     setDiagram(null);
     setFlowNodes([]);
     setFlowEdges([]);
+    setFlowExpansionHistory([]);
     setAnalysisResult(null);
     setError(null);
     setActiveTab('diagram');
@@ -154,6 +156,7 @@ export default function App() {
     setDiagram(null);
     setFlowNodes([]);
     setFlowEdges([]);
+    setFlowExpansionHistory([]);
     setAnalysisResult(null);
     setError(null);
     setActiveTab('diagram');
@@ -246,6 +249,13 @@ export default function App() {
 
       setFlowNodes((prev) => [...prev, ...childNodes]);
       setFlowEdges((prev) => [...prev, ...childEdges]);
+      setFlowExpansionHistory((prev) => [
+        ...prev,
+        {
+          nodeIds: childNodes.map((node) => node.id),
+          edgeIds: childEdges.map((edge) => edge.id),
+        },
+      ]);
     } catch (err) {
       console.error('Failed to expand node:', err);
 
@@ -273,6 +283,13 @@ export default function App() {
 
       setFlowNodes((prev) => [...prev, ...childNodes]);
       setFlowEdges((prev) => [...prev, ...childEdges]);
+      setFlowExpansionHistory((prev) => [
+        ...prev,
+        {
+          nodeIds: childNodes.map((node) => node.id),
+          edgeIds: childEdges.map((edge) => edge.id),
+        },
+      ]);
       setError('AI expansion failed. Added default topic breakdown.');
     } finally {
       setFlowNodes((prev) =>
@@ -283,6 +300,45 @@ export default function App() {
         )
       );
     }
+  };
+
+  const handleUndoFlowExpansion = () => {
+    setFlowExpansionHistory((prev) => {
+      const lastExpansion = prev[prev.length - 1];
+      if (!lastExpansion) return prev;
+
+      const nodeIdsToRemove = new Set(lastExpansion.nodeIds);
+      const edgeIdsToRemove = new Set(lastExpansion.edgeIds);
+
+      setFlowNodes((currentNodes) => currentNodes.filter((node) => !nodeIdsToRemove.has(node.id)));
+      setFlowEdges((currentEdges) => currentEdges.filter((edge) => !edgeIdsToRemove.has(edge.id)));
+
+      return prev.slice(0, -1);
+    });
+  };
+
+  const buildDiagramFromFlow = (nodes: Node[], edges: Edge[]) => {
+    if (!nodes.length) return diagram;
+
+    const sanitizeId = (value: string) => value.replace(/[^a-zA-Z0-9_]/g, '_');
+    const sanitizeLabel = (value: string) => value.replace(/"/g, '\\"').replace(/\n/g, ' ');
+
+    const nodeLines = nodes.map((node) => {
+      const nodeId = sanitizeId(node.id);
+      const label = sanitizeLabel(String(node.data?.label || node.id));
+      return `  ${nodeId}["${label}"]`;
+    });
+
+    const edgeLines = edges.map((edge) => {
+      const sourceId = sanitizeId(edge.source);
+      const targetId = sanitizeId(edge.target);
+      const label = String(edge.label || '').trim();
+      return label
+        ? `  ${sourceId} -->|${sanitizeLabel(label)}| ${targetId}`
+        : `  ${sourceId} --> ${targetId}`;
+    });
+
+    return ['graph TD', ...nodeLines, ...edgeLines].join('\n');
   };
 
   const parseStreamToFlow = (text: string) => {
@@ -335,10 +391,17 @@ export default function App() {
   const clearSelection = () => {
     setSelectedPapers([]);
     setDiagram(null);
+    setFlowNodes([]);
+    setFlowEdges([]);
+    setFlowExpansionHistory([]);
     setPdfAnalyses({});
     setPdfLoading({});
     setSelectedPdfId(null);
   };
+
+  const finalDiagramChart = flowExpansionHistory.length > 0
+    ? buildDiagramFromFlow(flowNodes, flowEdges)
+    : diagram;
 
   return (
     <div className="min-h-screen bg-[#E4E3E0] text-[#141414] font-sans selection:bg-[#141414] selection:text-[#E4E3E0]">
@@ -588,6 +651,8 @@ export default function App() {
                             <FlowDiagram 
                               nodes={flowNodes} 
                               edges={flowEdges} 
+                              onUndo={handleUndoFlowExpansion}
+                              canUndo={flowExpansionHistory.length > 0}
                               onNodeClick={(node) => {
                                 setSelectedNodeId(node.id);
                                 setActiveTab('deepdive');
@@ -598,13 +663,15 @@ export default function App() {
                           <FlowDiagram 
                             nodes={flowNodes} 
                             edges={flowEdges} 
+                            onUndo={handleUndoFlowExpansion}
+                            canUndo={flowExpansionHistory.length > 0}
                             onNodeClick={(node) => {
                               setSelectedNodeId(node.id);
                               setActiveTab('deepdive');
                             }}
                           />
                         ) : (
-                          <Diagram chart={diagram!} />
+                          <Diagram chart={finalDiagramChart!} />
                         )}
                       </motion.div>
                     ) : activeTab === 'analysis' ? (

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RotateCcw } from 'lucide-react';
 import ReactFlow, {
   Node,
   Edge,
@@ -86,9 +86,11 @@ interface FlowDiagramProps {
   nodes: Node[];
   edges: Edge[];
   onNodeClick?: (node: Node) => void;
+  onUndo?: () => void;
+  canUndo?: boolean;
 }
 
-export const FlowDiagram: React.FC<FlowDiagramProps> = ({ nodes: initialNodes, edges: initialEdges, onNodeClick }) => {
+export const FlowDiagram: React.FC<FlowDiagramProps> = ({ nodes: initialNodes, edges: initialEdges, onNodeClick, onUndo, canUndo = false }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
@@ -104,7 +106,16 @@ export const FlowDiagram: React.FC<FlowDiagramProps> = ({ nodes: initialNodes, e
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
   return (
-    <div className="w-full h-[600px] bg-white rounded-2xl border border-[#141414]/10 shadow-sm overflow-hidden">
+    <div className="w-full h-[600px] bg-white rounded-2xl border border-[#141414]/10 shadow-sm overflow-hidden relative">
+      <button
+        onClick={onUndo}
+        disabled={!canUndo}
+        className="absolute top-4 right-4 z-10 flex items-center gap-2 px-3 py-2 bg-white/95 border border-[#141414]/10 rounded-lg shadow-sm text-[10px] uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#141414] hover:text-[#E4E3E0] transition-all"
+        title="Undo last expansion"
+      >
+        <RotateCcw size={12} />
+        Undo
+      </button>
       <ReactFlow
         nodes={nodes}
         edges={edges}
