@@ -48,6 +48,9 @@ export default function App() {
   // Conceptual Dive state
   const [conceptualAnalysis, setConceptualAnalysis] = useState<any>(null);
   const [conceptualLoading, setConceptualLoading] = useState(false);
+  
+  // Selected node for tab generation
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,21 +204,19 @@ export default function App() {
         if (parts.length >= 2) {
           nodes.push({
             id: parts[0],
-            data: { label: parts[1] },
-            type: parts[2] || 'default',
-            position: { x: 0, y: 0 },
-            style: {
-              background: '#fff',
-              border: '1px solid #141414',
-              borderRadius: '8px',
-              fontSize: '10px',
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: '500',
-              padding: '10px',
-              width: 180,
-              textAlign: 'center',
-              color: '#141414',
+            data: { 
+              label: parts[1],
+              onDeepDive: (nodeData: any) => {
+                setSelectedNodeId(nodeData.id || parts[0]);
+                setActiveTab('deepdive');
+              },
+              onConceptual: (nodeData: any) => {
+                setSelectedNodeId(nodeData.id || parts[0]);
+                setActiveTab('conceptual');
+              }
             },
+            type: 'custom',
+            position: { x: 0, y: 0 },
           });
         }
       } else if (trimmedLine.startsWith('EDGE:')) {
@@ -490,7 +491,14 @@ export default function App() {
                               <Loader2 className="animate-spin text-[#141414]" size={14} />
                               <span className="text-[10px] uppercase tracking-widest opacity-60">Streaming Architecture...</span>
                             </div>
-                            <FlowDiagram nodes={flowNodes} edges={flowEdges} />
+                            <FlowDiagram 
+                              nodes={flowNodes} 
+                              edges={flowEdges} 
+                              onNodeClick={(node) => {
+                                setSelectedNodeId(node.id);
+                                setActiveTab('deepdive');
+                              }}
+                            />
                           </div>
                         ) : (
                           <Diagram chart={diagram!} />
@@ -526,6 +534,7 @@ export default function App() {
                           setLoading={setPdfLoading}
                           selectedPaperId={selectedPdfId}
                           setSelectedPaperId={setSelectedPdfId}
+                          selectedNodeId={selectedNodeId}
                         />
                       </motion.div>
                     ) : (
@@ -542,6 +551,7 @@ export default function App() {
                           setAnalysis={setConceptualAnalysis}
                           loading={conceptualLoading}
                           setLoading={setConceptualLoading}
+                          selectedNodeId={selectedNodeId}
                         />
                       </motion.div>
                     )}

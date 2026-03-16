@@ -13,6 +13,7 @@ interface DeepDiveProps {
   setLoading: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   selectedPaperId: string | null;
   setSelectedPaperId: React.Dispatch<React.SetStateAction<string | null>>;
+  selectedNodeId?: string | null;
 }
 
 export const DeepDive: React.FC<DeepDiveProps> = ({ 
@@ -22,7 +23,8 @@ export const DeepDive: React.FC<DeepDiveProps> = ({
   loading, 
   setLoading,
   selectedPaperId,
-  setSelectedPaperId
+  setSelectedPaperId,
+  selectedNodeId
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
 

@@ -9,6 +9,8 @@ import ReactFlow, {
   Controls,
   MarkerType,
   Position,
+  Handle,
+  NodeProps,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
@@ -16,8 +18,46 @@ import dagre from 'dagre';
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-const nodeWidth = 180;
+const nodeWidth = 220;
 const nodeHeight = 50;
+
+const CustomNode = ({ data, selected }: NodeProps) => {
+  return (
+    <div className={`px-4 py-2 shadow-md rounded-md bg-white border-2 min-w-[200px] ${selected ? 'border-blue-500' : 'border-stone-400'}`}>
+      <Handle type="target" position={Position.Top} className="w-3 h-3 !bg-teal-500" />
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-medium flex-1">{data.label}</div>
+        <div className="flex gap-1">
+          <button 
+            className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              data.onDeepDive?.(data);
+            }}
+            title="Deep Dive"
+          >
+            Deep Dive
+          </button>
+          <button 
+            className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              data.onConceptual?.(data);
+            }}
+            title="Conceptual Dive"
+          >
+            Concept
+          </button>
+        </div>
+      </div>
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 !bg-teal-500" />
+    </div>
+  );
+};
+
+const nodeTypes = {
+  custom: CustomNode,
+};
 
 const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => {
   const isHorizontal = direction === 'LR';
@@ -53,9 +93,10 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
 interface FlowDiagramProps {
   nodes: Node[];
   edges: Edge[];
+  onNodeClick?: (node: Node) => void;
 }
 
-export const FlowDiagram: React.FC<FlowDiagramProps> = ({ nodes: initialNodes, edges: initialEdges }) => {
+export const FlowDiagram: React.FC<FlowDiagramProps> = ({ nodes: initialNodes, edges: initialEdges, onNodeClick }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
@@ -75,8 +116,10 @@ export const FlowDiagram: React.FC<FlowDiagramProps> = ({ nodes: initialNodes, e
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeClick={onNodeClick ? (_, node) => onNodeClick(node) : undefined}
         connectionLineType={ConnectionLineType.SmoothStep}
         fitView
         className="bg-white"

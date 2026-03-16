@@ -20,9 +20,10 @@ interface ConceptualDiveProps {
   setAnalysis: (analysis: ConceptualAnalysis | null) => void;
   loading: boolean;
   setLoading: (loading: boolean) => void;
+  selectedNodeId?: string | null;
 }
 
-export function ConceptualDive({ papers, analysis, setAnalysis, loading, setLoading }: ConceptualDiveProps) {
+export function ConceptualDive({ papers, analysis, setAnalysis, loading, setLoading, selectedNodeId }: ConceptualDiveProps) {
   const [error, setError] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
 
