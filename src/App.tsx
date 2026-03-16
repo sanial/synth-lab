@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Loader2, Network, FileText, ExternalLink, Sparkles, ChevronRight, Share2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { searchArxiv, ArxivPaper } from './services/arxiv';
-import { synthesizeAll, generateAudio, synthesizeStream } from './services/gemini';
+import { synthesizeAll, generateAudio, synthesizeStream, expandFlowTopic } from './services/gemini';
 import { Diagram } from './components/Diagram';
 import { FlowDiagram } from './components/FlowDiagram';
 import { AnalysisAgent } from './components/AnalysisAgent';
@@ -197,6 +197,94 @@ export default function App() {
     }
   };
 
+  const handleExpandNode = async (nodeData: any) => {
+    const parentId = nodeData?.id;
+    const parentLabel = nodeData?.label;
+    if (!parentId || !parentLabel) return;
+
+    const buildFallbackChildren = (label: string) => [
+      `${label} Inputs`,
+      `${label} Processing`,
+      `${label} Optimization`,
+    ];
+
+    setFlowNodes((prev) =>
+      prev.map((node) =>
+        node.id === parentId
+          ? { ...node, data: { ...node.data, isExpanding: true } }
+          : node
+      )
+    );
+
+    try {
+      const contextSummaries = selectedPapers.map(
+        (paper) => `Title: ${paper.title}\nSummary: ${paper.summary}`
+      );
+      const children = await expandFlowTopic(parentLabel, contextSummaries);
+      const effectiveChildren = children.length ? children : buildFallbackChildren(parentLabel);
+
+      const createdAt = Date.now();
+      const childNodes: Node[] = effectiveChildren.map((childLabel, index) => ({
+        id: `${parentId}-child-${createdAt}-${index}`,
+        type: 'custom',
+        position: { x: 0, y: 0 },
+        data: {
+          label: childLabel,
+          onExpand: handleExpandNode,
+          isExpanding: false,
+        },
+      }));
+
+      const childEdges: Edge[] = childNodes.map((childNode) => ({
+        id: `e-${parentId}-${childNode.id}`,
+        source: parentId,
+        target: childNode.id,
+        label: 'breakdown',
+        animated: true,
+        markerEnd: { type: MarkerType.ArrowClosed },
+      }));
+
+      setFlowNodes((prev) => [...prev, ...childNodes]);
+      setFlowEdges((prev) => [...prev, ...childEdges]);
+    } catch (err) {
+      console.error('Failed to expand node:', err);
+
+      const fallbackChildren = buildFallbackChildren(parentLabel);
+      const createdAt = Date.now();
+      const childNodes: Node[] = fallbackChildren.map((childLabel, index) => ({
+        id: `${parentId}-child-${createdAt}-${index}`,
+        type: 'custom',
+        position: { x: 0, y: 0 },
+        data: {
+          label: childLabel,
+          onExpand: handleExpandNode,
+          isExpanding: false,
+        },
+      }));
+
+      const childEdges: Edge[] = childNodes.map((childNode) => ({
+        id: `e-${parentId}-${childNode.id}`,
+        source: parentId,
+        target: childNode.id,
+        label: 'breakdown',
+        animated: true,
+        markerEnd: { type: MarkerType.ArrowClosed },
+      }));
+
+      setFlowNodes((prev) => [...prev, ...childNodes]);
+      setFlowEdges((prev) => [...prev, ...childEdges]);
+      setError('AI expansion failed. Added default topic breakdown.');
+    } finally {
+      setFlowNodes((prev) =>
+        prev.map((node) =>
+          node.id === parentId
+            ? { ...node, data: { ...node.data, isExpanding: false } }
+            : node
+        )
+      );
+    }
+  };
+
   const parseStreamToFlow = (text: string) => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -211,14 +299,8 @@ export default function App() {
             id: parts[0],
             data: { 
               label: parts[1],
-              onDeepDive: (nodeData: any) => {
-                setSelectedNodeId(nodeData.id || parts[0]);
-                setActiveTab('deepdive');
-              },
-              onConceptual: (nodeData: any) => {
-                setSelectedNodeId(nodeData.id || parts[0]);
-                setActiveTab('conceptual');
-              }
+              onExpand: handleExpandNode,
+              isExpanding: false,
             },
             type: 'custom',
             position: { x: 0, y: 0 },

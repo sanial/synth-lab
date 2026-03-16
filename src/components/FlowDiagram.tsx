@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
+import { Loader2 } from 'lucide-react';
 import ReactFlow, {
   Node,
   Edge,
@@ -21,7 +22,7 @@ dagreGraph.setDefaultEdgeLabel(() => ({}));
 const nodeWidth = 220;
 const nodeHeight = 50;
 
-const CustomNode = ({ data, selected }: NodeProps) => {
+const CustomNode = ({ id, data, selected }: NodeProps) => {
   return (
     <div className={`px-4 py-2 shadow-md rounded-md bg-white border-2 min-w-[200px] ${selected ? 'border-blue-500' : 'border-stone-400'}`}>
       <Handle type="target" position={Position.Top} className="w-3 h-3 !bg-teal-500" />
@@ -29,24 +30,15 @@ const CustomNode = ({ data, selected }: NodeProps) => {
         <div className="text-sm font-medium flex-1">{data.label}</div>
         <div className="flex gap-1">
           <button 
-            className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            className="w-7 h-7 text-sm font-bold bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            disabled={Boolean(data.isExpanding)}
             onClick={(e) => {
               e.stopPropagation();
-              data.onDeepDive?.(data);
+              data.onExpand?.({ id, ...data });
             }}
-            title="Deep Dive"
+            title={data.isExpanding ? 'Expanding topic...' : 'Add Topic'}
           >
-            Deep Dive
-          </button>
-          <button 
-            className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-            onClick={(e) => {
-              e.stopPropagation();
-              data.onConceptual?.(data);
-            }}
-            title="Conceptual Dive"
-          >
-            Concept
+            {data.isExpanding ? <Loader2 size={14} className="animate-spin mx-auto" /> : '+'}
           </button>
         </div>
       </div>

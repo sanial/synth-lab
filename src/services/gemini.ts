@@ -126,3 +126,67 @@ export async function generateAudio(text: string) {
     return null;
   }
 }
+
+export async function expandFlowTopic(topic: string, contextSummaries: string[]) {
+  const context = contextSummaries.join("\n\n---\n\n");
+  const prompt = `
+    Expand this technical topic into a few direct child topics for a flow diagram.
+
+    Parent topic: ${topic}
+
+    Research context:
+    ${context || 'No additional context provided.'}
+
+    Requirements:
+    - Return 3 to 5 child topics.
+    - Each child must be short (2 to 6 words) and technical.
+    - Keep items concrete, not generic.
+
+    Return only JSON with this shape:
+    {
+      "children": ["child topic 1", "child topic 2", "child topic 3"]
+    }
+  `;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          children: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+          }
+        },
+        required: ["children"]
+      }
+    }
+  });
+
+  const raw = (response.text || "").trim();
+
+  let parsedChildren: string[] = [];
+  try {
+    const cleaned = raw.replace(/```json|```/gi, '').trim();
+    const parsed = JSON.parse(cleaned || "{\"children\":[]}");
+    parsedChildren = Array.isArray(parsed.children)
+      ? parsed.children.filter((item: unknown) => typeof item === 'string')
+      : [];
+  } catch {
+    parsedChildren = raw
+      .split('\n')
+      .map((line) => line.replace(/^[-*\d.)\s]+/, '').trim())
+      .filter(Boolean)
+      .slice(0, 5);
+  }
+
+  const children = parsedChildren
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 5);
+
+  return children;
+}
