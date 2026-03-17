@@ -1,5 +1,11 @@
 Link: https://synth-lab-203573749453.us-central1.run.app./
 
+<img width="3240" height="1804" alt="Screenshot 2026-03-16 190726" src="https://github.com/user-attachments/assets/840c3e58-5c82-491e-a5aa-30e479fecaae" />
+<img width="3240" height="1810" alt="Screenshot 2026-03-16 190748" src="https://github.com/user-attachments/assets/289cbefd-464c-4692-b59b-b5f83a0da742" />
+<img width="3236" height="1812" alt="Screenshot 2026-03-16 190807" src="https://github.com/user-attachments/assets/b39f8ebb-35b0-4b89-b5d0-ff2684316d00" />
+<img width="3240" height="1814" alt="Screenshot 2026-03-16 190846" src="https://github.com/user-attachments/assets/7990e1b6-1f6a-4886-ba16-312bc2da59fe" />
+
+
 ## Inspiration
 Don't just read research—watch it think. Most AI summaries are just walls of text that lose the complex architecture of a research paper. Synth Lab is a multimodal "Live Notebook" that doesn't just explain research papers; it architecturally reconstructs them. As the agent analysis methodology of one or more arXiv papers, it simultaneously "draws" the logic in real-time using interleaved D3.js concept maps and Mermaid diagrams.
 
@@ -50,5 +56,8 @@ We learned that visual reasoning is a distinct skill from text generation. Train
 1. Install dependencies:
    `npm install`
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+
+<img width="2218" height="1786" alt="Screenshot 2026-03-16 195825" src="https://github.com/user-attachments/assets/3478c740-7fee-429d-bad6-0e6035194858" />
+
+4. Run the app:
    `npm run dev`
