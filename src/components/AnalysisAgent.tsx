@@ -30,6 +30,7 @@ export const AnalysisAgent: React.FC<AnalysisAgentProps> = ({ papers, mainDiagra
   } | null>(preloadedResult || null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   React.useEffect(() => {
@@ -51,6 +52,7 @@ export const AnalysisAgent: React.FC<AnalysisAgentProps> = ({ papers, mainDiagra
   const handleStartAnalysis = async () => {
     setAnalyzing(true);
     setResult(null);
+    setError(null);
     try {
       const data = await synthesizeAll(papers);
       setResult(data);
@@ -61,9 +63,22 @@ export const AnalysisAgent: React.FC<AnalysisAgentProps> = ({ papers, mainDiagra
         if (audioData) {
           setResult(prev => prev ? { ...prev, audioData } : null);
         }
+      }).catch(err => {
+        console.error('Audio generation failed:', err);
       });
     } catch (error) {
       console.error('Analysis failed:', error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error('Full error details:', error);
+      setError(
+        errorMsg.includes('GEMINI_API_KEY')
+          ? 'API key not configured. Check Cloud Run environment variables.'
+          : errorMsg.includes('429')
+          ? 'API rate limit exceeded. Please try again in a moment.'
+          : errorMsg.includes('Failed to parse')
+          ? 'Invalid API response format. The model may need updating.'
+          : `Failed to process research: ${errorMsg}`
+      );
       setAnalyzing(false);
     }
   };
@@ -112,6 +127,22 @@ export const AnalysisAgent: React.FC<AnalysisAgentProps> = ({ papers, mainDiagra
           <Loader2 className="animate-spin text-[#141414] mb-4" size={32} />
           <p className="font-serif italic text-lg opacity-60">Synthesizing cross-paper insights...</p>
           <p className="text-[10px] uppercase tracking-widest opacity-30 mt-2">Generating audio narration & sub-diagrams</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="py-12 px-6 flex flex-col items-center justify-center border border-red-300 rounded-3xl bg-red-50/50">
+          <p className="text-sm font-semibold text-red-700 mb-2">Analysis Failed</p>
+          <p className="text-xs text-red-600 text-center max-w-md mb-4">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              handleStartAnalysis();
+            }}
+            className="px-4 py-2 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       )}
 

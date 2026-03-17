@@ -142,7 +142,13 @@ export default function App() {
         }
       });
     } catch (err) {
-      setError('Failed to generate diagram. Gemini might be busy.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate diagram';
+      const displayError = errorMessage.includes('GEMINI_API_KEY')
+        ? 'Gemini API key not configured. Please set GEMINI_API_KEY environment variable in Cloud Run.'
+        : errorMessage.includes('429')
+        ? 'API rate limit exceeded. Please wait a moment and try again.'
+        : `Failed to generate diagram: ${errorMessage}`;
+      setError(displayError);
       setGenerating(false);
       setIsStreaming(false);
     }
@@ -194,7 +200,13 @@ export default function App() {
       });
     } catch (err) {
       console.error('Synthesis error:', err);
-      setError('Failed to process research. The AI model might be overloaded or the content is too complex.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to process research';
+      const displayError = errorMessage.includes('GEMINI_API_KEY')
+        ? 'Gemini API key not configured. Please set GEMINI_API_KEY in Cloud Run.'
+        : errorMessage.includes('429')
+        ? 'API rate limit exceeded. Please wait a moment and try again.'
+        : `Failed to process research: ${errorMessage}`;
+      setError(displayError);
       setGenerating(false);
       setIsStreaming(false);
     }

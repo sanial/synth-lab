@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import mermaid from 'mermaid';
+import { sanitizeMermaidChart } from '../utils/mermaid';
 
 mermaid.initialize({
   startOnLoad: false,
@@ -22,27 +23,12 @@ export const Diagram: React.FC<DiagramProps> = ({ chart }) => {
           // Clear previous content
           if (ref.current) ref.current.innerHTML = '';
           
-          // Clean the chart code
-          let cleanChart = chart.trim();
-          if (cleanChart.startsWith('```')) {
-            cleanChart = cleanChart.replace(/^```(?:mermaid)?\n?/, '').replace(/\n?```$/, '');
-          }
-          if (cleanChart.startsWith('mermaid')) {
-            cleanChart = cleanChart.replace(/^mermaid\n?/, '');
-          }
+          let cleanChart = sanitizeMermaidChart(chart);
 
-          // Fix common error: missing space/newline after graph TD/LR/etc
-          cleanChart = cleanChart.replace(/^(graph\s+(?:TD|LR|BT|RL|TB))([^\s\n])/i, '$1\n$2');
-          
           // Fix common error: using quotes directly after graph TD without node ID
           if (cleanChart.match(/^graph\s+\w+\s*"/)) {
             cleanChart = cleanChart.replace(/^(graph\s+\w+\s*)(".*")/, '$1A[$2]');
           }
-
-          // Fix common error: newlines inside quotes (Mermaid doesn't like this)
-          cleanChart = cleanChart.replace(/"([^"]*)"/g, (match, p1) => {
-            return `"${p1.replace(/\n/g, ' ')}"`;
-          });
 
           const id = `mermaid-${Math.random().toString(36).substring(2, 9)}`;
           

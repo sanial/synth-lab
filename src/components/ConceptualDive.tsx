@@ -5,6 +5,7 @@ import { ArxivPaper } from '../services/arxiv';
 import { performConceptualDive, ConceptualAnalysis, Visualization } from '../services/conceptualDive';
 import mermaid from 'mermaid';
 import Markdown from 'react-markdown';
+import { sanitizeMermaidChart } from '../utils/mermaid';
 
 // Initialize mermaid
 mermaid.initialize({
@@ -38,7 +39,8 @@ export function ConceptualDive({ papers, analysis, setAnalysis, loading, setLoad
       setAnalysis(result);
     } catch (err) {
       console.error('ConceptualDive: Error during dive:', err);
-      setError('Failed to perform conceptual dive. The papers might be too large or the AI is busy.');
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Failed to perform conceptual dive: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -143,7 +145,7 @@ export function ConceptualDive({ papers, analysis, setAnalysis, loading, setLoad
             <Sparkles size={20} />
             Start Conceptual Dive
           </button>
-          <p className="text-[10px] uppercase tracking-widest opacity-40 mt-4">This will analyze all selected PDFs using Gemini 3</p>
+          <p className="text-[10px] uppercase tracking-widest opacity-40 mt-4">This will analyze all selected PDFs using Gemini</p>
         </div>
       )}
     </div>
@@ -168,7 +170,7 @@ function VisualizationCard({ visualization }: { visualization: Visualization }) 
         console.log(`VisualizationCard: Rendering ${visualization.type} with ID ${id}`);
         
         // Ensure code is trimmed and starts with the type
-        const cleanCode = visualization.code.trim();
+        const cleanCode = sanitizeMermaidChart(visualization.code);
         
         const { svg } = await mermaid.render(id, cleanCode);
         console.log(`VisualizationCard: Successfully rendered ${visualization.type}, SVG length: ${svg.length}`);
