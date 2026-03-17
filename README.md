@@ -1,4 +1,6 @@
 Link: https://synth-lab-203573749453.us-central1.run.app./
+Youtube Link: https://youtu.be/_lGVlJ6S7NQ
+[![Watch the video](https://img.youtube.com/vi/_lGVlJ6S7NQ/0.jpg)]([https://youtu.be/_lGVlJ6S7NQ](https://youtu.be/_lGVlJ6S7NQ))
 
 <img width="3240" height="1804" alt="Screenshot 2026-03-16 190726" src="https://github.com/user-attachments/assets/840c3e58-5c82-491e-a5aa-30e479fecaae" />
 <img width="3240" height="1810" alt="Screenshot 2026-03-16 190748" src="https://github.com/user-attachments/assets/289cbefd-464c-4692-b59b-b5f83a0da742" />
