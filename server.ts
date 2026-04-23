@@ -13,11 +13,23 @@ const __dirname = path.dirname(__filename);
 const GEMINI_TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || "gemini-2.5-flash";
 const GEMINI_AUDIO_MODEL = process.env.GEMINI_AUDIO_MODEL || "gemini-2.5-flash-preview-tts";
 
+/**
+ * Boots the Express application, registers API endpoints, wires Vite middleware
+ * in development, and serves static assets in production.
+ *
+ * @returns Promise that resolves once the HTTP server starts listening.
+ */
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 8080;
   app.use(express.json({ limit: "2mb" }));
 
+  /**
+   * Creates a configured Gemini client using the runtime API key.
+   *
+   * @returns Initialized `GoogleGenAI` client.
+   * @throws Error if `GEMINI_API_KEY` is missing.
+   */
   const getAiClient = () => {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -26,6 +38,12 @@ async function startServer() {
     return new GoogleGenAI({ apiKey });
   };
 
+  /**
+   * Downloads a PDF and converts it to a base64 string for Gemini inline input.
+   *
+   * @param url Absolute PDF URL.
+   * @returns Base64-encoded PDF binary data.
+   */
   const fetchPdfAsBase64 = async (url: string): Promise<string> => {
     const response = await axios.get(url, {
       responseType: "arraybuffer",
@@ -44,6 +62,12 @@ async function startServer() {
     const maxRetries = 4;
     let retryCount = 0;
 
+    /**
+     * Maps low-level arXiv or network errors to user-friendly API messages.
+     *
+     * @param error Upstream axios/network error object.
+     * @returns Human-readable message for frontend display.
+     */
     const buildArxivUserMessage = (error: any): string => {
       const status = error?.response?.status;
       const code = error?.code;
@@ -64,6 +88,12 @@ async function startServer() {
       return "Could not fetch papers from arXiv right now. Please try again.";
     };
 
+    /**
+     * Determines whether an arXiv request failure should be retried.
+     *
+     * @param error Upstream axios/network error object.
+     * @returns `true` when failure is likely transient.
+     */
     const isRetriableArxivError = (error: any): boolean => {
       const status = error?.response?.status;
       const code = error?.code;
@@ -77,6 +107,11 @@ async function startServer() {
       return code === "ECONNABORTED" || code === "ETIMEDOUT" || code === "ECONNRESET";
     };
 
+    /**
+     * Executes arXiv API query with retry/backoff for transient failures.
+     *
+     * @returns Parsed arXiv Atom feed object.
+     */
     const fetchArxiv = async (): Promise<any> => {
       try {
         const response = await axios.get("https://export.arxiv.org/api/query", {
