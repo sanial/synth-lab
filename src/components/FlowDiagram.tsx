@@ -16,6 +16,12 @@ import dagre from 'dagre';
 const nodeWidth = 220;
 const nodeHeight = 76;
 
+/**
+ * Custom React Flow node used for expandable synthesis topics.
+ *
+ * @param props React Flow node props containing node metadata and selection state.
+ * @returns Rendered node card with optional expand action.
+ */
 const CustomNode = ({ id, data, selected }: NodeProps) => {
   return (
     <div className={`px-4 py-2 shadow-md rounded-md bg-white border-2 min-w-[200px] ${selected ? 'border-blue-500' : 'border-stone-400'}`}>
@@ -45,6 +51,14 @@ const nodeTypes = {
   custom: CustomNode,
 };
 
+/**
+ * Applies a Dagre-based layout to flow nodes and edges.
+ *
+ * @param nodes React Flow nodes to position.
+ * @param edges React Flow edges to route.
+ * @param direction Layout direction (`TB` for vertical, `LR` for horizontal).
+ * @returns Object containing layouted nodes and original edges.
+ */
 const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => {
   const isHorizontal = direction === 'LR';
   const dagreGraph = new dagre.graphlib.Graph();
@@ -78,14 +92,33 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
   return { nodes, edges };
 };
 
+/**
+ * Props for the FlowDiagram renderer.
+ */
 interface FlowDiagramProps {
+  /** Graph nodes to visualize. */
   nodes: Node[];
+  /** Graph edges connecting nodes. */
   edges: Edge[];
+  /** Optional callback invoked when a node is clicked. */
   onNodeClick?: (node: Node) => void;
+  /** Optional callback invoked when undo button is pressed. */
   onUndo?: () => void;
+  /** Enables/disables the undo action button. */
   canUndo?: boolean;
 }
 
+/**
+ * Renders the interactive flow diagram for synthesis mode using React Flow.
+ *
+ * @param props Component props.
+ * @param props.nodes Input nodes before auto-layout.
+ * @param props.edges Input edges before render.
+ * @param props.onNodeClick Optional node click handler.
+ * @param props.onUndo Optional undo handler.
+ * @param props.canUndo Whether undo is currently available.
+ * @returns Rendered flow diagram canvas with controls.
+ */
 export const FlowDiagram: React.FC<FlowDiagramProps> = ({ nodes: initialNodes, edges: initialEdges, onNodeClick, onUndo, canUndo = false }) => {
   const { nodes, edges } = useMemo(() => {
     if (!initialNodes.length) {

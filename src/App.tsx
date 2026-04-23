@@ -30,6 +30,7 @@ export default function App() {
   } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -56,12 +57,12 @@ export default function App() {
   // Diagram mode: flow or final
   const [diagramMode, setDiagramMode] = useState<'flow' | 'final'>('flow');
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const runSearch = async () => {
     if (!query.trim()) return;
-    
+
     setLoading(true);
     setError(null);
+    setSearchError(null);
     setOffset(0);
     setHasMore(true);
     try {
@@ -69,10 +70,18 @@ export default function App() {
       setPapers(results);
       if (results.length < 20) setHasMore(false);
     } catch (err) {
-      setError('Failed to fetch research papers. Please try again.');
+      const message = err instanceof Error ? err.message : 'Failed to fetch research papers. Please try again.';
+      setSearchError(message);
+      setPapers([]);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runSearch();
   };
 
   const handleLoadMore = async () => {
@@ -91,6 +100,8 @@ export default function App() {
       }
     } catch (err) {
       console.error('Error loading more papers:', err);
+      const message = err instanceof Error ? err.message : 'Unable to load more arXiv results right now.';
+      setSearchError(message);
     } finally {
       setLoadingMore(false);
     }
@@ -469,6 +480,23 @@ export default function App() {
             </button>
           </form>
 
+          {searchError && (
+            <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-medium">arXiv Search Error</p>
+                  <p className="mt-1 text-xs leading-relaxed">{searchError}</p>
+                </div>
+                <button
+                  onClick={() => setSearchError(null)}
+                  className="text-[10px] uppercase tracking-widest hover:opacity-60 transition-opacity"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <span className="font-serif italic text-xs opacity-50 uppercase tracking-widest">Research Feed</span>
@@ -543,9 +571,24 @@ export default function App() {
             )}
 
             {!loading && papers.length === 0 && (
-              <div className="py-20 text-center opacity-30">
-                <p className="font-serif italic text-sm">No research loaded.</p>
-                <p className="text-[10px] uppercase tracking-widest mt-2">Enter a query to begin synthesis</p>
+              <div className={cn(
+                "py-20 text-center",
+                searchError ? "opacity-100" : "opacity-30"
+              )}>
+                <p className="font-serif italic text-sm">
+                  {searchError ? 'Research lookup failed.' : 'No research loaded.'}
+                </p>
+                <p className="text-[10px] uppercase tracking-widest mt-2">
+                  {searchError ? searchError : 'Enter a query to begin synthesis'}
+                </p>
+                {searchError && (
+                  <button
+                    onClick={() => void runSearch()}
+                    className="mt-4 px-4 py-2 border border-red-300 rounded-full text-[10px] uppercase tracking-widest text-red-700 hover:bg-red-50 transition-colors"
+                  >
+                    Retry Search
+                  </button>
+                )}
               </div>
             )}
           </div>

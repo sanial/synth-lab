@@ -5,13 +5,34 @@ import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 // Set worker source using Vite's asset handling
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
+/**
+ * Normalized PDF analysis payload consumed by Deep Dive visualizations.
+ */
 export interface PdfAnalysis {
+  /** Full extracted text content across all pages. */
   text: string;
+  /** Count of tokenized words matching the analysis regex. */
   wordCount: number;
+  /** Top keyword frequencies after stop-word filtering. */
   topWords: { word: string; count: number }[];
+  /** Number of pages in the parsed PDF document. */
   pageCount: number;
 }
 
+/**
+ * Fetches and parses a PDF via the backend proxy, then computes a lightweight
+ * lexical summary used by the Deep Dive tab.
+ *
+ * Processing steps:
+ * 1. Route the input URL through `/api/pdf` to avoid CORS issues.
+ * 2. Extract text from each page using `pdfjs-dist`.
+ * 3. Tokenize words, filter stop words, and calculate top frequencies.
+ *
+ * @param url Absolute PDF URL (for example an arXiv PDF link).
+ * @returns A normalized `PdfAnalysis` object containing extracted text,
+ *          word counts, ranked keywords, and page count.
+ * @throws Propagates errors from network fetch or PDF parsing.
+ */
 export async function parsePdf(url: string): Promise<PdfAnalysis> {
   const proxyUrl = `/api/pdf?url=${encodeURIComponent(url)}`;
   const loadingTask = pdfjs.getDocument(proxyUrl);

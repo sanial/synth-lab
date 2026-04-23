@@ -6,17 +6,38 @@ import { Diagram } from './Diagram';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
+/**
+ * Chat message item rendered in the Research Agent conversation.
+ */
 interface Message {
+  /** Message author role used to style alignment and avatar. */
   role: 'user' | 'assistant';
+  /** Plain text content or text that may include Mermaid fenced blocks. */
   content: string;
 }
 
+/**
+ * Props for the ChatAgent side panel.
+ */
 interface ChatAgentProps {
+  /** Current synthesis diagram used as context for the assistant. */
   currentDiagram: string | null;
+  /** Selected paper summaries passed as grounding context. */
   selectedPapers: { title: string; summary: string }[];
+  /** Callback to close the chat panel. */
   onClose: () => void;
 }
 
+/**
+ * Interactive chat panel that answers questions using selected paper summaries
+ * and the currently generated technical diagram.
+ *
+ * @param props Component props.
+ * @param props.currentDiagram Mermaid diagram context for grounding responses.
+ * @param props.selectedPapers Selected papers included in system context.
+ * @param props.onClose Callback invoked when user closes the panel.
+ * @returns Rendered chat interface with message history and input controls.
+ */
 export const ChatAgent: React.FC<ChatAgentProps> = ({ currentDiagram, selectedPapers, onClose }) => {
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: "I'm your Research Agent. I can explain the concepts in these papers or help you understand the technical diagram. What would you like to dive into?" }
@@ -31,6 +52,12 @@ export const ChatAgent: React.FC<ChatAgentProps> = ({ currentDiagram, selectedPa
     }
   }, [messages]);
 
+  /**
+   * Sends the current user message to Gemini with synthesized context,
+   * then appends the assistant response to local conversation state.
+   *
+   * @returns Promise that resolves after message handling completes.
+   */
   const handleSend = async () => {
     if (!input.trim() || loading) return;
 
@@ -86,6 +113,13 @@ export const ChatAgent: React.FC<ChatAgentProps> = ({ currentDiagram, selectedPa
     }
   };
 
+  /**
+   * Renders assistant/user message content and inlines Mermaid diagrams when
+   * fenced `mermaid` code blocks are present.
+   *
+   * @param content Raw message content.
+   * @returns Array of rendered React nodes for text and diagrams.
+   */
   const renderContent = (content: string) => {
     const parts = content.split(/(```mermaid[\s\S]*?```)/g);
     return parts.map((part, i) => {
@@ -180,7 +214,12 @@ export const ChatAgent: React.FC<ChatAgentProps> = ({ currentDiagram, selectedPa
   );
 };
 
-// Helper function for class names
+/**
+ * Minimal class name join helper for local conditional styling.
+ *
+ * @param inputs Class values to merge.
+ * @returns Space-separated class name string.
+ */
 function cn(...inputs: any[]) {
   return inputs.filter(Boolean).join(' ');
 }

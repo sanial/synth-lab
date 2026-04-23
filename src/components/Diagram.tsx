@@ -9,15 +9,32 @@ mermaid.initialize({
   fontFamily: 'Inter, sans-serif',
 });
 
+/**
+ * Props for the Mermaid diagram renderer.
+ */
 interface DiagramProps {
+  /** Raw Mermaid chart source code to sanitize and render. */
   chart: string;
 }
 
+/**
+ * Renders sanitized Mermaid source into SVG and injects it into the view.
+ * If rendering fails, shows a compact fallback error panel with a chart preview.
+ *
+ * @param props Component props.
+ * @param props.chart Mermaid chart source string.
+ * @returns Rendered diagram container.
+ */
 export const Diagram: React.FC<DiagramProps> = ({ chart }) => {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (ref.current && chart) {
+      /**
+       * Sanitizes and renders Mermaid source into the component container.
+       *
+       * @returns Promise that resolves once rendering or fallback completes.
+       */
       const renderDiagram = async () => {
         try {
           // Clear previous content

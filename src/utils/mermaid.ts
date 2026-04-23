@@ -1,3 +1,15 @@
+/**
+ * Normalizes a Mermaid label value and ensures it is wrapped in double quotes.
+ *
+ * Behavior:
+ * - Replaces newlines with spaces.
+ * - Preserves empty labels by returning the original input.
+ * - Converts single-quoted labels to double-quoted labels.
+ * - Escapes inner double quotes.
+ *
+ * @param label Raw node/subgraph label content.
+ * @returns A Mermaid-safe quoted label string.
+ */
 function quoteLabelContent(label: string) {
   const normalized = label.replace(/\n/g, " ").trim();
   if (!normalized) {
@@ -9,6 +21,15 @@ function quoteLabelContent(label: string) {
   return `"${normalized.replace(/"/g, '\\"')}"`;
 }
 
+/**
+ * Sanitizes labels in flowchart/graph node and subgraph declarations.
+ *
+ * This utility ensures bracket/brace node labels and plain subgraph titles
+ * are consistently quoted to reduce Mermaid parse failures.
+ *
+ * @param chart Mermaid chart source text.
+ * @returns Chart source with normalized flowchart label quoting.
+ */
 function sanitizeFlowchartLabels(chart: string) {
   let cleaned = chart;
 
@@ -31,6 +52,19 @@ function sanitizeFlowchartLabels(chart: string) {
   return cleaned;
 }
 
+/**
+ * Cleans and normalizes Mermaid source before rendering.
+ *
+ * Normalization includes:
+ * - Stripping optional markdown code fences.
+ * - Removing an optional leading `mermaid` keyword.
+ * - Forcing a newline after `graph <dir>` declarations.
+ * - Removing accidental newlines inside quoted strings.
+ * - Applying flowchart-specific label sanitization.
+ *
+ * @param chart Raw Mermaid source (possibly wrapped in markdown fences).
+ * @returns Sanitized Mermaid source that is safer to render.
+ */
 export function sanitizeMermaidChart(chart: string) {
   let cleanChart = chart.trim();
 

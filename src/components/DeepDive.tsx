@@ -5,17 +5,43 @@ import { parsePdf, PdfAnalysis } from '../services/pdf';
 import { Loader2, FileText, BarChart3, Info } from 'lucide-react';
 import { motion } from 'motion/react';
 
+/**
+ * Props for the Deep Dive visualization panel.
+ */
 interface DeepDiveProps {
+  /** Papers selected for PDF parsing and lexical visualization. */
   papers: ArxivPaper[];
+  /** Cached PDF analyses keyed by paper ID. */
   analyses: Record<string, PdfAnalysis>;
+  /** Setter for cached PDF analyses map. */
   setAnalyses: React.Dispatch<React.SetStateAction<Record<string, PdfAnalysis>>>;
+  /** Loading flags keyed by paper ID. */
   loading: Record<string, boolean>;
+  /** Setter for loading flags map. */
   setLoading: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  /** Currently selected paper for focused visualization. */
   selectedPaperId: string | null;
+  /** Setter for selected paper ID. */
   setSelectedPaperId: React.Dispatch<React.SetStateAction<string | null>>;
+  /** Optional selected node context from diagram tabs. */
   selectedNodeId?: string | null;
 }
 
+/**
+ * Deep Dive panel that parses selected PDFs and renders a D3 keyword-density
+ * bubble chart plus document metadata.
+ *
+ * @param props Component props.
+ * @param props.papers Selected papers to analyze.
+ * @param props.analyses Cached per-paper PDF analyses.
+ * @param props.setAnalyses Setter for analysis cache.
+ * @param props.loading Per-paper loading flags.
+ * @param props.setLoading Setter for loading state map.
+ * @param props.selectedPaperId Currently focused paper ID.
+ * @param props.setSelectedPaperId Setter for focused paper selection.
+ * @param props.selectedNodeId Optional external node context.
+ * @returns Rendered Deep Dive visualization and metadata panel.
+ */
 export const DeepDive: React.FC<DeepDiveProps> = ({ 
   papers, 
   analyses, 
@@ -76,6 +102,12 @@ export const DeepDive: React.FC<DeepDiveProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [selectedPaperId, analyses]);
 
+  /**
+   * Renders the keyword-density bubble chart using D3 pack layout.
+   *
+   * @param analysis Parsed PDF analysis for the selected paper.
+   * @returns Void.
+   */
   const renderChart = (analysis: PdfAnalysis) => {
     if (!svgRef.current) return;
     

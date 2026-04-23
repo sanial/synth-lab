@@ -15,19 +15,47 @@ mermaid.initialize({
   fontFamily: 'Inter, sans-serif',
 });
 
+/**
+ * Props for the conceptual dive panel.
+ */
 interface ConceptualDiveProps {
+  /** Selected papers used as analysis input. */
   papers: ArxivPaper[];
+  /** Current conceptual analysis payload, when available. */
   analysis: ConceptualAnalysis | null;
+  /** State setter for conceptual analysis results. */
   setAnalysis: (analysis: ConceptualAnalysis | null) => void;
+  /** Loading flag for the conceptual dive request lifecycle. */
   loading: boolean;
+  /** State setter for loading status. */
   setLoading: (loading: boolean) => void;
+  /** Optional selected graph node context from parent view. */
   selectedNodeId?: string | null;
 }
 
+/**
+ * Conceptual Dive view for cross-paper comparison and Mermaid-based
+ * visualization rendering.
+ *
+ * @param props Component props.
+ * @param props.papers Papers selected by the user.
+ * @param props.analysis Current conceptual analysis payload.
+ * @param props.setAnalysis Setter for conceptual analysis state.
+ * @param props.loading Loading state for conceptual analysis requests.
+ * @param props.setLoading Setter for loading state.
+ * @param props.selectedNodeId Optional selected node context from other tabs.
+ * @returns Rendered conceptual comparison panel.
+ */
 export function ConceptualDive({ papers, analysis, setAnalysis, loading, setLoading, selectedNodeId }: ConceptualDiveProps) {
   const [error, setError] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
 
+  /**
+   * Requests conceptual analysis for currently selected papers and updates
+   * parent-managed state with the normalized result.
+   *
+   * @returns Promise that resolves when request handling completes.
+   */
   const handleDive = async () => {
     console.log("ConceptualDive: handleDive triggered");
     setLoading(true);
@@ -152,12 +180,33 @@ export function ConceptualDive({ papers, analysis, setAnalysis, loading, setLoad
   );
 }
 
-function VisualizationCard({ visualization }: { visualization: Visualization }) {
+/**
+ * Props for an individual conceptual visualization card.
+ */
+interface VisualizationCardProps {
+  /** Visualization payload containing mermaid source and metadata. */
+  visualization: Visualization;
+}
+
+/**
+ * Renders a single Mermaid visualization card with graceful error fallback.
+ *
+ * @param props Component props.
+ * @param props.visualization Visualization configuration and Mermaid code.
+ * @returns Rendered visualization card.
+ */
+function VisualizationCard({ visualization }: VisualizationCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    /**
+     * Sanitizes Mermaid code, renders it to SVG, and stores the SVG markup
+     * for display in the card.
+     *
+     * @returns Promise that resolves once rendering state is updated.
+     */
     const renderDiagram = async () => {
       if (!visualization.code) {
         console.warn("VisualizationCard: No code provided for", visualization.title);

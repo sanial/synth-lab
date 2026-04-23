@@ -38,25 +38,65 @@ async function startServer() {
     return Buffer.from(response.data).toString("base64");
   };
 
-  // arXiv Proxy with retry logic
+  // arXiv proxy with retry logic for throttling and transient network failures.
   app.get("/api/arxiv", async (req, res) => {
     const { search_query, start, max_results } = req.query;
-    const maxRetries = 3;
+    const maxRetries = 4;
     let retryCount = 0;
+
+    const buildArxivUserMessage = (error: any): string => {
+      const status = error?.response?.status;
+      const code = error?.code;
+      const rawMessage = String(error?.message || "").toLowerCase();
+
+      if (status === 429) {
+        return "arXiv is rate limiting requests right now. Please try again in a minute.";
+      }
+
+      if (code === "ECONNABORTED" || code === "ETIMEDOUT" || rawMessage.includes("timeout")) {
+        return "arXiv is taking too long to respond. Please retry in a moment.";
+      }
+
+      if (typeof status === "number" && status >= 500) {
+        return "arXiv is temporarily unavailable. Please try again shortly.";
+      }
+
+      return "Could not fetch papers from arXiv right now. Please try again.";
+    };
+
+    const isRetriableArxivError = (error: any): boolean => {
+      const status = error?.response?.status;
+      const code = error?.code;
+
+      // 429/5xx are generally temporary from upstream.
+      if (status === 429 || (typeof status === "number" && status >= 500 && status < 600)) {
+        return true;
+      }
+
+      // Network-layer transient failures we can safely retry.
+      return code === "ECONNABORTED" || code === "ETIMEDOUT" || code === "ECONNRESET";
+    };
 
     const fetchArxiv = async (): Promise<any> => {
       try {
-        const response = await axios.get("http://export.arxiv.org/api/query", {
+        const response = await axios.get("https://export.arxiv.org/api/query", {
           params: { search_query, start, max_results },
-          timeout: 10000,
+          timeout: 20000,
+          headers: {
+            "User-Agent": "synth-lab/1.0 (contact: local-dev)",
+            Accept: "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
+          },
         });
         return await parseStringPromise(response.data);
       } catch (error: any) {
-        if (error.response?.status === 429 && retryCount < maxRetries) {
+        if (isRetriableArxivError(error) && retryCount < maxRetries) {
           retryCount++;
-          const delay = Math.pow(2, retryCount) * 1000;
-          console.log(`arXiv rate limited. Retrying in ${delay}ms... (Attempt ${retryCount}/${maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          const baseDelayMs = Math.pow(2, retryCount) * 1000;
+          const jitterMs = Math.floor(Math.random() * 300);
+          const delayMs = baseDelayMs + jitterMs;
+          const reason = error?.response?.status ? `HTTP ${error.response.status}` : error?.code || error?.message || "unknown";
+          console.log(`arXiv transient error (${reason}). Retrying in ${delayMs}ms... (Attempt ${retryCount}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
           return fetchArxiv();
         }
         throw error;
@@ -69,9 +109,9 @@ async function startServer() {
     } catch (error: any) {
       console.error("arXiv proxy error:", error.message);
       const status = error.response?.status || 500;
+      const message = buildArxivUserMessage(error);
       res.status(status).json({ 
-        error: "Failed to fetch from arXiv", 
-        details: error.message,
+        error: message,
         status: status
       });
     }
